@@ -1,21 +1,24 @@
+import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bluetooth_classic/bluetooth_classic.dart';
-import 'package:bluetooth_classic/models/device.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:logging/logging.dart';
 
 final Logger _logger = Logger("bluetooth");
-final _bluetoothClassicPlugin = BluetoothClassic();
 final _serialUUID = "00001101-0000-1000-8000-00805F9B34FB";
 
+Bluetooth? _instance;
+
 class Bluetooth {
+  Bluetooth._internal();
+
   String platformVersion = "Unknown";
   bool _scanning = false;
 
-  List<Device> _pairedDevices = [];
-  List<Device> _discoveredDevices = [];
-  int _deviceStatus = Device.disconnected;
+  //List<Device> _pairedDevices = [];
+  // List<Device> _discoveredDevices = [];
 
   Uint8List _data = Uint8List(0);
   bool _preserveData = false;
@@ -24,83 +27,61 @@ class Bluetooth {
   List<void Function(Uint8List)> _dataReceivedListeners = [];
   void Function()? onScanStart;
   void Function()? onScanEnd;
-  void Function(Device)? onDeviceDiscovered;
+  void Function(ScanResult)? onDeviceDiscovered;
 
-  void init() async {
-    await _bluetoothClassicPlugin.initPermissions();
-
-    try {
-      platformVersion =
-          await _bluetoothClassicPlugin.getPlatformVersion() ??
-          "Unknown platform version";
-      _logger.info("Platform version: $platformVersion");
-    } on PlatformException catch (e) {
-      platformVersion = "Failed to get platform version";
-      _logger.warning("Failed to get platform version: $e");
+  factory Bluetooth() {
+    if (_instance == null) {
+      _instance = Bluetooth._internal();
+      _instance!.init();
     }
 
-    _bluetoothClassicPlugin.onDeviceStatusChanged().listen((event) {
-      _logger.finer("Device status changed: $event");
-      _deviceStatus = event;
+    return _instance!;
+  }
 
-      for (var listener in _deviceStatusListeners) {
-        listener(event);
+  void init() async {
+    FlutterBluePlus.setLogLevel(LogLevel.info);
+
+    if (await FlutterBluePlus.isSupported == false) {
+      _logger.severe("Bluetooth is not supported");
+      return;
+    }
+
+    FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
+      _logger.info("Bluetooth adapter state changed: $state");
+      if (state == BluetoothAdapterState.on) {
+        // usually start scanning, connecting, etc
+      } else {
+        FlutterBluePlus.stopScan();
       }
     });
 
-    _bluetoothClassicPlugin.onDeviceDataReceived().listen((event) {
-      _data = _preserveData ? Uint8List.fromList([..._data, ...event]) : event;
-      _logger.finer("Received data: $event");
-
-      for (var listener in _dataReceivedListeners) {
-        listener(_data);
-      }
-    });
-  }
-
-  void addStatusCallback(void Function(int) callback) {
-    _deviceStatusListeners.add(callback);
-  }
-
-  void removeStatusCallback(void Function(int) callback) {
-    _deviceStatusListeners.remove(callback);
-  }
-
-  Future<void> getPairedDevices() async {
-    var res = await _bluetoothClassicPlugin.getPairedDevices();
-    _pairedDevices = res;
+    // turn on bluetooth ourself if we can
+    // for iOS, the user controls bluetooth enable/disable
+    if (!kIsWeb && Platform.isAndroid) {
+      await FlutterBluePlus.turnOn();
+    }
   }
 
   Future<void> toggleScan() async {
-    if (_scanning) {
-      await _bluetoothClassicPlugin.stopScan();
-      _scanning = false;
+    if (FlutterBluePlus.isScanningNow) {
+      FlutterBluePlus.stopScan();
       onScanEnd?.call();
     } else {
-      await _bluetoothClassicPlugin.startScan();
+      var subscription = FlutterBluePlus.onScanResults.listen(
+        (results) {
+          if (results.isNotEmpty) {
+            ScanResult r = results.last; // the most recently found device
+            _logger.fine('${r.device.remoteId}: "${r.advertisementData.advName}" found!');
+            onDeviceDiscovered?.call(r);
+          }
+        },
+        onError: (e) => _logger.severe(e),
+      );
 
-      _bluetoothClassicPlugin.onDeviceDiscovered().listen((event) {
-        _logger.finer("Discovered device: ${event.name}");
-        _discoveredDevices = [..._discoveredDevices, event];
-        onDeviceDiscovered?.call(event);
-      });
+      // cleanup: cancel subscription when scanning stops
+      FlutterBluePlus.cancelWhenScanComplete(subscription);
 
-      _scanning = true;
-      onScanStart?.call();
-      _logger.info("Scanning for devices...");
-    }
-  }
-
-  void connect(Device device) async {
-    await _bluetoothClassicPlugin.connect(device.address, _serialUUID);
-  }
-
-  void write(String message, void Function() onError) {
-    if (_deviceStatus == Device.connected) {
-      _bluetoothClassicPlugin.write(message);
-    } else {
-      _logger.severe("Device not connected");
-      onError();
+      FlutterBluePlus.startScan();
     }
   }
 }
