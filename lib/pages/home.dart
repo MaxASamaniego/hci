@@ -22,8 +22,8 @@ class _HomeState extends State<Home> {
           children: [
             const Text("Home"),
             ElevatedButton(
-              onPressed: () async {
-                await smartkitController.findSmartkitDevices();
+              onPressed: () {
+                smartkitController.findSmartkitDevices();
               },
               child: const Text("Search Devices"),
             ),
