@@ -30,7 +30,9 @@ class Bluetooth {
     await _bluetoothClassicPlugin.initPermissions();
 
     try {
-      platformVersion = await _bluetoothClassicPlugin.getPlatformVersion() ?? "Unknown platform version";
+      platformVersion =
+          await _bluetoothClassicPlugin.getPlatformVersion() ??
+          "Unknown platform version";
       _logger.info("Platform version: $platformVersion");
     } on PlatformException catch (e) {
       platformVersion = "Failed to get platform version";
@@ -47,7 +49,7 @@ class Bluetooth {
     });
 
     _bluetoothClassicPlugin.onDeviceDataReceived().listen((event) {
-      _data = _preserveData ? Uint8List.fromList([..._data, ...event]): event;
+      _data = _preserveData ? Uint8List.fromList([..._data, ...event]) : event;
       _logger.finer("Received data: $event");
 
       for (var listener in _dataReceivedListeners) {
@@ -76,15 +78,13 @@ class Bluetooth {
       onScanEnd?.call();
     } else {
       await _bluetoothClassicPlugin.startScan();
-      
-      _bluetoothClassicPlugin.onDeviceDiscovered().listen(
-        (event) {
-          _logger.finer("Discovered device: ${event.name}");
-          _discoveredDevices = [..._discoveredDevices, event];
-          onDeviceDiscovered?.call(event);
-        },
-      );
-      
+
+      _bluetoothClassicPlugin.onDeviceDiscovered().listen((event) {
+        _logger.finer("Discovered device: ${event.name}");
+        _discoveredDevices = [..._discoveredDevices, event];
+        onDeviceDiscovered?.call(event);
+      });
+
       _scanning = true;
       onScanStart?.call();
       _logger.info("Scanning for devices...");
