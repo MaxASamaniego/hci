@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -15,15 +16,14 @@ Bluetooth? _instance;
 class Bluetooth {
   Bluetooth._internal();
 
-  String platformVersion = "Unknown";
-
-  List<BluetoothService> services = [];
+  BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? target;
 
-  void Function()? onScanStart;
-  void Function()? onScanEnd;
+  void Function()? _onScanStart;
+  void Function()? _onScanEnd;
 
-  void Function(BluetoothDevice)? onDeviceDiscovered;
+  void Function(BluetoothDevice)? _deviceListener;
+  void Function(String)? _onMessageReceived;
 
   factory Bluetooth() {
     if (_instance == null) {
@@ -58,32 +58,38 @@ class Bluetooth {
     }
   }
 
-  Future<void> toggleScan() async {
-    if (FlutterBluePlus.isScanningNow) {
-      FlutterBluePlus.stopScan();
-      onScanEnd?.call();
-    } else {
-      var subscription = FlutterBluePlus.onScanResults.listen(
-        (results) {
-          if (results.isNotEmpty) {
-            ScanResult r = results.last; // the most recently found device
-            _logger.fine(
-                '${r.device.remoteId}: "${r.advertisementData.advName}" found!');
+  void startScan() async {
+    if (FlutterBluePlus.isScanningNow) return;
 
-            if (r.advertisementData.advName == "HMSoft") {
-              _logger.info("Found HMSoft device");
-              onDeviceDiscovered?.call(r.device);
-            }
+    var subscription = FlutterBluePlus.onScanResults.listen(
+      (results) {
+        if (results.isNotEmpty) {
+          ScanResult r = results.last; // the most recently found device
+          _logger.fine('${r.device.remoteId}: "${r.advertisementData.advName}" found!');
+
+          if (r.advertisementData.advName == "HMSoft") {
+            _logger.info("Found HMSoft device");
+            connect(r.device);
+            _deviceListener?.call(r.device);
+            stopScan();
           }
-        },
-        onError: (e) => _logger.severe(e),
-      );
+        }
+      },
+      onError: (e) => _logger.severe(e),
+    );
 
-      // cleanup: cancel subscription when scanning stops
-      FlutterBluePlus.cancelWhenScanComplete(subscription);
+    // cleanup: cancel subscription when scanning stops
+    FlutterBluePlus.cancelWhenScanComplete(subscription);
 
-      FlutterBluePlus.startScan();
-    }
+    FlutterBluePlus.startScan();
+    _onScanStart?.call();
+  }
+
+  void stopScan() async {
+    if (!FlutterBluePlus.isScanningNow) return;
+
+    FlutterBluePlus.stopScan();
+    _onScanEnd?.call();
   }
 
   void connect(BluetoothDevice device) async {
@@ -94,8 +100,9 @@ class Bluetooth {
         // 1. typically, start a periodic timer that tries to
         //    reconnect, or just call connect() again right now
         // 2. you must always re-discover services after disconnection!
-        _logger.info(
-            "Device disconnected: ${device.disconnectReason?.code} ${device.disconnectReason?.description}");
+        _logger.info("Device disconnected: ${device.disconnectReason?.code} ${device.disconnectReason?.description}");
+
+        //TODO: Attempt to reconnect
       }
       if (state == BluetoothConnectionState.connected) {
         _logger.info("Device connected");
@@ -113,50 +120,75 @@ class Bluetooth {
 
     // Connect to the device
     await device.connect();
-    services = await device.discoverServices();
-    _logger.finer("Found services: $services");
-    write("Hello world");
+    _connectedDevice = device;
   }
 
   void disconnect(BluetoothDevice device) async {
     await device.disconnect();
-    services = [];
+    target = null;
   }
 
-  void write(String message) async {
-    for (var service in services) {
-      for (var char in service.characteristics) {
-        _logger.finer("Characteristic: ${char.properties}");
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          _logger.finer("Characteristic found");
-          // You can also check UUID if you know it
-          target = char;
-          break;
+  Future<bool> write(String message, {Encoding encoding = utf8, bool expectResponse = false}) async {
+    if (_connectedDevice == null) {
+      _logger.severe("Illegal state: Not connected to a device");
+      throw Exception("Not connected to a device");
+    }
+
+    if (target == null) {
+      final services = await _connectedDevice!.discoverServices();
+      for (var service in services) {
+        for (var char in service.characteristics) {
+          _logger.finer("Characteristic: ${char.properties}");
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            _logger.finer("Characteristic found");
+            // You can also check UUID if you know it
+            target = char;
+            break;
+          }
         }
+      }
+
+      if (target != null) {
+        // Should only run once when getting the target
+        final subscription = target!.onValueReceived.listen((value) {
+          _onMessageReceived?.call(encoding.decode(value));
+        });
+
+        _connectedDevice!.cancelWhenDisconnected(subscription);
+      } else {
+        _logger.warning("No characteristic with write properties found");
+        return false;
       }
     }
 
-    await target!.write(utf8.encode(message), withoutResponse: false);
+    await target!.write(encoding.encode(message), withoutResponse: !expectResponse);
 
-    target!.onValueReceived.listen((value) {
-      try {
-        // Allow malformed input in case the data is not valid UTF-8.
-        String response = utf8.decode(value, allowMalformed: true);
-        _logger.info("Received: $response");
-      } catch (e) {
-        _logger.warning("Failed to decode response: $e");
-      }
-    });
-
-    target!.read();
+    return true;
   }
 
-  Future<String> read() async {
+  Future<String> read({Encoding encoding = utf8}) async {
     if (target == null) {
+      _logger.severe("Illegal state: Target characteristic is null");
       throw Exception("No target characteristic found");
     }
 
     List<int> value = await target!.read();
-    return utf8.decode(value);
+    return encoding.decode(value);
+  }
+
+  void onScanStart(void Function() onScanStart) {
+    _onScanStart = onScanStart;
+  }
+
+  void onScanEnd(void Function() onScanEnd) {
+    _onScanEnd = onScanEnd;
+  }
+
+  void onDeviceFound(void Function(BluetoothDevice device) onDeviceFound) {
+    _deviceListener = onDeviceFound;
+  }
+
+  void onMessageReceived(void Function(String message) onMessageReceived) {
+    _onMessageReceived = onMessageReceived;
   }
 }

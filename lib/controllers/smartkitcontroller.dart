@@ -1,10 +1,11 @@
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
 import 'package:hci/infrastructure/bluetooth.dart';
+import 'package:logging/logging.dart';
+
+final _logger = Logger("Smart Kit Controller");
 
 class Smartkitcontroller extends GetxController {
   final bluetooth = Bluetooth();
-  BluetoothDevice? hmSoftDevice;
   // final List<Device> pairedDevices = <Device>[];
 
   // @override
@@ -13,11 +14,9 @@ class Smartkitcontroller extends GetxController {
   // }
 
   void findSmartkitDevices() {
-    bluetooth.onDeviceDiscovered = (device) {
-      bluetooth.connect(device);
-      bluetooth.toggleScan();
-    };
+    bluetooth.onMessageReceived((message) => _logger.info("Message received: $message"));
+    bluetooth.startScan();
 
-    bluetooth.toggleScan();
+    //TODO: Write and read
   }
 }
