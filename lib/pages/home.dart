@@ -28,7 +28,7 @@ class _HomeState extends State<Home> {
               child: const Text("Search Devices"),
             ),
             Obx(() => ElevatedButton(
-              onPressed: smartkitController.connected.value ? () => smartkitController.write("Hello") : null, 
+              onPressed: smartkitController.connected.value ? () => smartkitController.writeAndRead("Hello") : null, 
               child: const Text("Send message")
             )),
             Obx(() => Text("${smartkitController.response}"))

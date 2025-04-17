@@ -8,12 +8,6 @@ class Smartkitcontroller extends GetxController {
   final bluetooth = Bluetooth();
   var connected = false.obs;
   var response = "".obs;
-  // final List<Device> pairedDevices = <Device>[];
-
-  // @override
-  // void onInit() {
-  //   super.onInit();
-  // }
 
   void findSmartkitDevices() {
     bluetooth.onMessageReceived((message) => _logger.info("Message received: $message"));
