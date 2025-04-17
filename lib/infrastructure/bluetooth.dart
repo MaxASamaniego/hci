@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:logging/logging.dart';
 
 final Logger _logger = Logger("bluetooth");
-final _serialUUID = "00001101-0000-1000-8000-00805F9B34FB";
 
 Bluetooth? _instance;
 
@@ -22,7 +19,8 @@ class Bluetooth {
   void Function()? _onScanStart;
   void Function()? _onScanEnd;
 
-  void Function(BluetoothDevice)? _deviceListener;
+  void Function(BluetoothDevice)? _onConnect;
+  void Function(BluetoothDevice)? _onDisconnect;
   void Function(String)? _onMessageReceived;
 
   factory Bluetooth() {
@@ -70,7 +68,6 @@ class Bluetooth {
           if (r.advertisementData.advName == "HMSoft") {
             _logger.info("Found HMSoft device");
             connect(r.device);
-            _deviceListener?.call(r.device);
             stopScan();
           }
         }
@@ -101,11 +98,13 @@ class Bluetooth {
         //    reconnect, or just call connect() again right now
         // 2. you must always re-discover services after disconnection!
         _logger.info("Device disconnected: ${device.disconnectReason?.code} ${device.disconnectReason?.description}");
+        _onDisconnect?.call(device);
 
         //TODO: Attempt to reconnect
       }
       if (state == BluetoothConnectionState.connected) {
         _logger.info("Device connected");
+        _onConnect?.call(device);
       }
     });
 
@@ -184,8 +183,12 @@ class Bluetooth {
     _onScanEnd = onScanEnd;
   }
 
-  void onDeviceFound(void Function(BluetoothDevice device) onDeviceFound) {
-    _deviceListener = onDeviceFound;
+  void onConnect(void Function(BluetoothDevice device) onConnect) {
+    _onConnect = onConnect;
+  }
+
+  void onDisconnect(void Function(BluetoothDevice device) onDisconnect) {
+    _onDisconnect = onDisconnect;
   }
 
   void onMessageReceived(void Function(String message) onMessageReceived) {

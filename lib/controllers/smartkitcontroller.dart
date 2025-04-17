@@ -6,6 +6,8 @@ final _logger = Logger("Smart Kit Controller");
 
 class Smartkitcontroller extends GetxController {
   final bluetooth = Bluetooth();
+  var connected = false.obs;
+  var response = "".obs;
   // final List<Device> pairedDevices = <Device>[];
 
   // @override
@@ -15,8 +17,21 @@ class Smartkitcontroller extends GetxController {
 
   void findSmartkitDevices() {
     bluetooth.onMessageReceived((message) => _logger.info("Message received: $message"));
+    bluetooth.onConnect((_) => connected.value = true);
+    bluetooth.onDisconnect((_) => connected.value = false);
     bluetooth.startScan();
+  }
 
-    //TODO: Write and read
+  void writeAndRead(String message) async {
+    await bluetooth.write(message);
+    response.value = await bluetooth.read();
+  }
+
+  void write(String message) {
+    bluetooth.write(message);
+  }
+
+  Future<String> read() {
+    return bluetooth.read();
   }
 }
