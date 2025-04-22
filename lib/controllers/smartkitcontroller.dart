@@ -9,11 +9,15 @@ class Smartkitcontroller extends GetxController {
   var connected = false.obs;
   var response = "".obs;
 
-  void findSmartkitDevices() {
-    bluetooth.onMessageReceived((message) => _logger.info("Message received: $message"));
-    bluetooth.onConnect((_) => connected.value = true);
-    bluetooth.onDisconnect((_) => connected.value = false);
-    bluetooth.startScan();
+  void findSmartkitDevices() async {
+    try {
+      await bluetooth.startScan();
+      await bluetooth.connect("HMSoft");
+      connected.value = true;
+    } catch (e) {
+      _logger.severe("Error connecting to device: $e");
+      connected.value = false;
+    }
   }
 
   void writeAndRead(String message) async {

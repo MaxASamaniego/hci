@@ -15,6 +15,7 @@ class Bluetooth {
 
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? target;
+  Map<String, BluetoothDevice> devices = {};
 
   void Function()? _onScanStart;
   void Function()? _onScanEnd;
@@ -56,30 +57,24 @@ class Bluetooth {
     }
   }
 
-  void startScan() async {
+  Future<void> startScan() async {
+    //searches for devices, finishes when scan is stopped
     if (FlutterBluePlus.isScanningNow) return;
 
-    var subscription = FlutterBluePlus.onScanResults.listen(
-      (results) {
-        if (results.isNotEmpty) {
-          ScanResult r = results.last; // the most recently found device
-          _logger.fine('${r.device.remoteId}: "${r.advertisementData.advName}" found!');
-
-          if (r.advertisementData.advName == "HMSoft") {
-            _logger.info("Found HMSoft device");
-            connect(r.device);
-            stopScan();
-          }
-        }
-      },
-      onError: (e) => _logger.severe(e),
-    );
+    var subscription = FlutterBluePlus.onScanResults.listen((results) {
+      if (results.isNotEmpty) {
+        ScanResult r = results.last; // the most recently found device
+        _logger.fine(
+          '${r.device.remoteId}: "${r.advertisementData.advName}" found!',
+        );
+        devices[r.advertisementData.advName] = r.device;
+      }
+    }, onError: (e) => _logger.severe(e));
 
     // cleanup: cancel subscription when scanning stops
     FlutterBluePlus.cancelWhenScanComplete(subscription);
-
-    FlutterBluePlus.startScan();
     _onScanStart?.call();
+    await FlutterBluePlus.startScan();
   }
 
   void stopScan() async {
@@ -89,21 +84,42 @@ class Bluetooth {
     _onScanEnd?.call();
   }
 
-  void connect(BluetoothDevice device) async {
-    // listen for disconnection
-    var subscription =
-        device.connectionState.listen((BluetoothConnectionState state) async {
+  Future<void> connect(String deviceName) async {
+    //connects to device of given name, if none where found throws an error
+    if (devices.isEmpty) {
+      _logger.severe(
+        "No devices found, make sure bluetooth is on and scanned previously",
+      );
+      throw Exception(
+        "No se encontraron dispositivos, asegurate que bluetooth este activado y haya sido escaneado previamente",
+      );
+    }
+    if (!devices.containsKey(deviceName)) {
+      _logger.severe("Device not found");
+      throw Exception("No se encontro bluetooth con ese nombre");
+    }
+
+    BluetoothDevice? device = devices[deviceName];
+    if (device == null) {
+      _logger.severe("Device is null");
+      throw Exception("Error, device is null");
+    }
+    var subscription = device.connectionState.listen((
+      BluetoothConnectionState state,
+    ) {
       if (state == BluetoothConnectionState.disconnected) {
         // 1. typically, start a periodic timer that tries to
         //    reconnect, or just call connect() again right now
         // 2. you must always re-discover services after disconnection!
-        _logger.info("Device disconnected: ${device.disconnectReason?.code} ${device.disconnectReason?.description}");
+        _logger.info(
+          "Device disconnected: ${device.disconnectReason?.code} ${device.disconnectReason?.description}",
+        );
+        _connectedDevice = null;
         _onDisconnect?.call(device);
-
-        //TODO: Attempt to reconnect
       }
       if (state == BluetoothConnectionState.connected) {
         _logger.info("Device connected");
+        _connectedDevice = device;
         _onConnect?.call(device);
       }
     });
@@ -127,7 +143,11 @@ class Bluetooth {
     target = null;
   }
 
-  Future<bool> write(String message, {Encoding encoding = utf8, bool expectResponse = false}) async {
+  Future<bool> write(
+    String message, {
+    Encoding encoding = utf8,
+    bool expectResponse = false,
+  }) async {
     if (_connectedDevice == null) {
       _logger.severe("Illegal state: Not connected to a device");
       throw Exception("Not connected to a device");
@@ -160,7 +180,10 @@ class Bluetooth {
       }
     }
 
-    await target!.write(encoding.encode(message), withoutResponse: !expectResponse);
+    await target!.write(
+      encoding.encode(message),
+      withoutResponse: !expectResponse,
+    );
 
     return true;
   }
