@@ -19,6 +19,7 @@ class Bluetooth {
 
   void Function()? _onScanStart;
   void Function()? _onScanEnd;
+  void Function(ScanResult)? _onDeviceFound;
 
   void Function(BluetoothDevice)? _onConnect;
   void Function(BluetoothDevice)? _onDisconnect;
@@ -68,6 +69,8 @@ class Bluetooth {
           '${r.device.remoteId}: "${r.advertisementData.advName}" found!',
         );
         devices[r.advertisementData.advName] = r.device;
+
+        _onDeviceFound?.call(r);
       }
     }, onError: (e) => _logger.severe(e));
 
@@ -91,12 +94,12 @@ class Bluetooth {
         "No devices found, make sure bluetooth is on and scanned previously",
       );
       throw Exception(
-        "No se encontraron dispositivos, asegurate que bluetooth este activado y haya sido escaneado previamente",
+        "No se encontraron dispositivos, asegúrate que bluetooth este activado y haya sido escaneado previamente",
       );
     }
     if (!devices.containsKey(deviceName)) {
       _logger.severe("Device not found");
-      throw Exception("No se encontro bluetooth con ese nombre");
+      throw Exception("No se encontró bluetooth con ese nombre");
     }
 
     BluetoothDevice? device = devices[deviceName];
@@ -171,6 +174,7 @@ class Bluetooth {
         // Should only run once when getting the target
         final subscription = target!.onValueReceived.listen((value) {
           _onMessageReceived?.call(encoding.decode(value));
+          _logger.finest("Received: $value");
         });
 
         _connectedDevice!.cancelWhenDisconnected(subscription);
@@ -185,6 +189,8 @@ class Bluetooth {
       withoutResponse: !expectResponse,
     );
 
+    _logger.finest("Sent: ${encoding.encode(message)}");
+
     return true;
   }
 
@@ -195,7 +201,7 @@ class Bluetooth {
     }
 
     List<int> value = await target!.read();
-    return encoding.decode(value);
+    return utf8.decode(value, allowMalformed: true);
   }
 
   void onScanStart(void Function() onScanStart) {
@@ -204,6 +210,10 @@ class Bluetooth {
 
   void onScanEnd(void Function() onScanEnd) {
     _onScanEnd = onScanEnd;
+  }
+
+  void onDeviceFound(void Function(ScanResult result) onDeviceFound) {
+    _onDeviceFound = onDeviceFound;
   }
 
   void onConnect(void Function(BluetoothDevice device) onConnect) {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:get/get.dart';
 import 'package:hci/infrastructure/bluetooth.dart';
 import 'package:logging/logging.dart';
@@ -10,19 +12,27 @@ class Smartkitcontroller extends GetxController {
   var response = "".obs;
 
   void findSmartkitDevices() async {
+    bluetooth.onDeviceFound((result) {
+      if (result.advertisementData.advName != "HMSoft") {
+        return;
+      }
+
+      bluetooth.connect(result.advertisementData.advName);
+      bluetooth.stopScan();
+      connected.value = true;
+    });
+    
     try {
       await bluetooth.startScan();
-      await bluetooth.connect("HMSoft");
-      connected.value = true;
     } catch (e) {
       _logger.severe("Error connecting to device: $e");
       connected.value = false;
     }
   }
 
-  void writeAndRead(String message) async {
-    await bluetooth.write(message);
-    response.value = await bluetooth.read();
+  void writeAndRead(String message, {Encoding encoding = utf8}) async {
+    await bluetooth.write(message, encoding: encoding);
+    response.value = await bluetooth.read(encoding: encoding);
   }
 
   void write(String message) {
