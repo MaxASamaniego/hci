@@ -14,7 +14,9 @@ class Bluetooth {
   Bluetooth._internal();
 
   BluetoothDevice? _connectedDevice;
-  BluetoothCharacteristic? target;
+  BluetoothCharacteristic? _targetWrite;
+  List<BluetoothCharacteristic> _targetRead = [];
+  List<BluetoothService> _targetServices = [];
   Map<String, BluetoothDevice> devices = {};
 
   void Function()? _onScanStart;
@@ -143,7 +145,7 @@ class Bluetooth {
 
   void disconnect(BluetoothDevice device) async {
     await device.disconnect();
-    target = null;
+    _targetWrite = null;
   }
 
   Future<bool> write(
@@ -156,35 +158,27 @@ class Bluetooth {
       throw Exception("Not connected to a device");
     }
 
-    if (target == null) {
+    if (_targetWrite == null) {
       final services = await _connectedDevice!.discoverServices();
       for (var service in services) {
+        _logger.finer("Service: $service");
         for (var char in service.characteristics) {
-          _logger.finer("Characteristic: ${char.properties}");
           if (char.properties.write || char.properties.writeWithoutResponse) {
             _logger.finer("Characteristic found");
             // You can also check UUID if you know it
-            target = char;
+            _targetWrite = char;
             break;
           }
         }
       }
 
-      if (target != null) {
-        // Should only run once when getting the target
-        final subscription = target!.onValueReceived.listen((value) {
-          _onMessageReceived?.call(encoding.decode(value));
-          _logger.finest("Received: $value");
-        });
-
-        _connectedDevice!.cancelWhenDisconnected(subscription);
-      } else {
-        _logger.warning("No characteristic with write properties found");
+      if (_targetWrite == null) {
+        _logger.warning("No characteristic with read properties found");
         return false;
       }
     }
 
-    await target!.write(
+    await _targetWrite!.write(
       encoding.encode(message),
       withoutResponse: !expectResponse,
     );
@@ -195,13 +189,37 @@ class Bluetooth {
   }
 
   Future<String> read({Encoding encoding = utf8}) async {
-    if (target == null) {
-      _logger.severe("Illegal state: Target characteristic is null");
-      throw Exception("No target characteristic found");
+    _targetServices = await _connectedDevice!.discoverServices();
+    _targetServices.forEach((service) async {
+      var characteristics = service.characteristics;
+      for (BluetoothCharacteristic c in characteristics) {
+        if (c.properties.read) {
+          List<int> value = await c.read();
+
+          _logger.finer("Received: $value");
+        }
+      }
+    });
+    return "";
+  }
+
+  void subscribeAll(void Function(List<int>) callback) async {
+    if (_targetServices.isEmpty) {
+      _targetServices = await _connectedDevice!.discoverServices();
     }
 
-    List<int> value = await target!.read();
-    return utf8.decode(value, allowMalformed: true);
+    _targetServices.forEach((service) {
+      for (var char in service.characteristics) {
+        if (char.properties.notify) {
+          final sub = char.onValueReceived.listen((value) {
+            callback(value);
+          });
+          char.setNotifyValue(true);
+          
+          _connectedDevice!.cancelWhenDisconnected(sub);
+        }
+      }
+    });
   }
 
   void onScanStart(void Function() onScanStart) {

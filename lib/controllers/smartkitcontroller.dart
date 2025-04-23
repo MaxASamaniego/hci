@@ -31,7 +31,7 @@ class Smartkitcontroller extends GetxController {
   }
 
   void writeAndRead(String message, {Encoding encoding = utf8}) async {
-    await bluetooth.write(message, encoding: encoding);
+    await bluetooth.write(message, encoding: encoding, expectResponse: true);
     response.value = await bluetooth.read(encoding: encoding);
   }
 
@@ -39,7 +39,11 @@ class Smartkitcontroller extends GetxController {
     bluetooth.write(message);
   }
 
-  Future<String> read() {
-    return bluetooth.read();
+  Future<String> read() async {
+    bluetooth.subscribeAll((data) {
+      _logger.finer("Received: $data");
+      _logger.finest("Decoded: ${String.fromCharCodes(data)}");
+    });
+    return '';
   }
 }
