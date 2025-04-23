@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -148,19 +150,30 @@ class Bluetooth {
     _targetWrite = null;
   }
 
+  void _ensureConnected() {
+    if (_connectedDevice == null) {
+      _logger.severe("Illegal state: Not connected to a device");
+      throw Exception("Not connected to a device!");
+    }
+  }
+
+  Future<List<BluetoothService>> getServices() async {
+    _ensureConnected();
+
+    if (_targetServices.isEmpty) {
+      _targetServices = await _connectedDevice!.discoverServices();
+    }
+
+    return _targetServices;
+  }
+
   Future<bool> write(
     String message, {
     Encoding encoding = utf8,
     bool expectResponse = false,
   }) async {
-    if (_connectedDevice == null) {
-      _logger.severe("Illegal state: Not connected to a device");
-      throw Exception("Not connected to a device");
-    }
-
     if (_targetWrite == null) {
-      final services = await _connectedDevice!.discoverServices();
-      for (var service in services) {
+      for (var service in await getServices()) {
         _logger.finer("Service: $service");
         for (var char in service.characteristics) {
           if (char.properties.write || char.properties.writeWithoutResponse) {
@@ -178,6 +191,8 @@ class Bluetooth {
       }
     }
 
+    _ensureConnected();
+
     await _targetWrite!.write(
       encoding.encode(message),
       withoutResponse: !expectResponse,
@@ -188,38 +203,36 @@ class Bluetooth {
     return true;
   }
 
-  Future<String> read({Encoding encoding = utf8}) async {
-    _targetServices = await _connectedDevice!.discoverServices();
-    _targetServices.forEach((service) async {
-      var characteristics = service.characteristics;
-      for (BluetoothCharacteristic c in characteristics) {
-        if (c.properties.read) {
-          List<int> value = await c.read();
-
-          _logger.finer("Received: $value");
-        }
-      }
-    });
-    return "";
-  }
-
-  void subscribeAll(void Function(List<int>) callback) async {
-    if (_targetServices.isEmpty) {
-      _targetServices = await _connectedDevice!.discoverServices();
-    }
-
-    _targetServices.forEach((service) {
+  void subscribeAll(void Function(List<int>) onNotification) async {
+    for (var service in await getServices()) {
       for (var char in service.characteristics) {
         if (char.properties.notify) {
           final sub = char.onValueReceived.listen((value) {
-            callback(value);
+            _logger.finer("Char UUID: ${char.characteristicUuid}");
+            onNotification(value);
           });
           char.setNotifyValue(true);
           
           _connectedDevice!.cancelWhenDisconnected(sub);
         }
       }
-    });
+    }
+  }
+
+  Future<void> subscribe(String uuid, void Function(List<int>) onNotification) async {
+    for (var service in await getServices()) {
+      for (var char in service.characteristics) {
+        if (char.properties.notify && char.uuid.toString() == uuid) {
+          final sub = char.onValueReceived.listen((data) {
+            onNotification(data);
+          });
+
+          char.setNotifyValue(true);
+          _logger.fine("Subscribed to characteristic: $uuid");
+          _connectedDevice!.cancelWhenDisconnected(sub);
+        }
+      }
+    }
   }
 
   void onScanStart(void Function() onScanStart) {

@@ -10,7 +10,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final smartkitController = Get.find<Smartkitcontroller>();
+  final smartkitController = Get.find<SmartkitController>();
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class _HomeState extends State<Home> {
               () => ElevatedButton(
                 onPressed:
                     smartkitController.connected.value
-                        ? () => smartkitController.writeAndRead("hhhhhhhhhhhhhhhhhhh")
+                        ? () => smartkitController.writeAndRead("h")
                         : null,
                 child: const Text("Send message"),
               ),

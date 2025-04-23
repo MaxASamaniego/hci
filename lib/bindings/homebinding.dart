@@ -6,6 +6,6 @@ class Homebinding extends Bindings {
   void dependencies() {
     // Add your dependencies here
     // For example: Get.lazyPut<YourController>(() => YourController());
-    Get.put<Smartkitcontroller>(Smartkitcontroller());
+    Get.put<SmartkitController>(SmartkitController());
   }
 }

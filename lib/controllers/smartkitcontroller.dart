@@ -6,8 +6,9 @@ import 'package:logging/logging.dart';
 
 final _logger = Logger("Smart Kit Controller");
 
-class Smartkitcontroller extends GetxController {
+class SmartkitController extends GetxController {
   final bluetooth = Bluetooth();
+
   var connected = false.obs;
   var response = "".obs;
 
@@ -21,7 +22,11 @@ class Smartkitcontroller extends GetxController {
       bluetooth.stopScan();
       connected.value = true;
     });
-    
+
+    bluetooth.onConnect((_) {
+      subscribeToDevice();
+    });
+
     try {
       await bluetooth.startScan();
     } catch (e) {
@@ -32,7 +37,6 @@ class Smartkitcontroller extends GetxController {
 
   void writeAndRead(String message, {Encoding encoding = utf8}) async {
     await bluetooth.write(message, encoding: encoding, expectResponse: true);
-    response.value = await bluetooth.read(encoding: encoding);
   }
 
   void write(String message) {
@@ -45,5 +49,17 @@ class Smartkitcontroller extends GetxController {
       _logger.finest("Decoded: ${String.fromCharCodes(data)}");
     });
     return '';
+  }
+
+  void subscribeToDevice() async {
+    await bluetooth.subscribe("ffe1", onDeviceNotification);
+  }
+
+  void onDeviceNotification(List<int> data) {
+    String decodedMessage = String.fromCharCodes(data);
+    // String type = decodedMessage.split(":")[0];
+    // String value = decodedMessage.split(":")[1];
+    ///definir funciones para cada tipo de mensaje
+    response.value = decodedMessage;
   }
 }
