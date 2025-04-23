@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
-import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -17,7 +15,6 @@ class Bluetooth {
 
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _targetWrite;
-  List<BluetoothCharacteristic> _targetRead = [];
   List<BluetoothService> _targetServices = [];
   Map<String, BluetoothDevice> devices = {};
 
@@ -27,7 +24,6 @@ class Bluetooth {
 
   void Function(BluetoothDevice)? _onConnect;
   void Function(BluetoothDevice)? _onDisconnect;
-  void Function(String)? _onMessageReceived;
 
   factory Bluetooth() {
     if (_instance == null) {
@@ -253,9 +249,5 @@ class Bluetooth {
 
   void onDisconnect(void Function(BluetoothDevice device) onDisconnect) {
     _onDisconnect = onDisconnect;
-  }
-
-  void onMessageReceived(void Function(String message) onMessageReceived) {
-    _onMessageReceived = onMessageReceived;
   }
 }
