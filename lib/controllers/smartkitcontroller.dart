@@ -6,13 +6,13 @@ import 'package:logging/logging.dart';
 
 final _logger = Logger("Smart Kit Controller");
 
-class SmartkitController extends GetxController {
+class SmartKitController extends GetxController {
   final bluetooth = Bluetooth();
 
   var connected = false.obs;
   var response = "".obs;
 
-  void findSmartkitDevices() async {
+  void findSmartKitDevices() async {
     bluetooth.onDeviceFound((result) {
       if (result.advertisementData.advName != "HMSoft") {
         return;
@@ -69,34 +69,49 @@ class _Parser {
   static final RegExp pattern = RegExp(r'^g:\d+\|l:\d+\|i:\d+\|w:\d+\|s:\d+\|$');
   static String buffer = "";
   static String lastRead = "";
-  static String lastMarker = "";
 
   static String parse(String message) {
-    if (buffer.isNotEmpty) {
-      if (message.contains("#")) {
-        List<String> t = message.split("#");
-        lastRead = buffer + t[0];
-        buffer = t[1];
-      }
-    } else {
-      if (message.contains("\$")) {
-        List<String> t = message.split("\$");
-        buffer = t[1];
+    String read = "";
+    int i = 0;
 
-        if (buffer.contains("#")) {
-          lastRead = buffer;
-          buffer = "";
+    if (buffer.isEmpty) {
+      bool store = false;
+
+      for (; i < message.length; i++) {
+        if (message[i] == "\$") {
+          store = true;
+          continue;
+        } else if (message[i] == "#") {
+          break;
+        }
+
+        if (store) {
+          buffer += message[i];
         }
       }
     }
+    
+    for (; i < message.length; i++) {
+      if (message[i] == "#") {
+        read = buffer;
 
-    if (lastRead.contains("\$")) {
-      lastRead.replaceAll("r\\\$", "");
+        // Optimistic guess since the end of the message and the start of the next one
+        // should be next to each other, so the character next to # should be $
+        if (i + 2 < message.length) {
+          buffer = message.substring(i + 2);
+        }
+        
+        break;
+      } else if (message[i] == "\$") {
+        buffer = "";
+        continue;
+      }
+
+      buffer += message[i];
     }
 
-    if (pattern.hasMatch(lastRead)) {
-      lastRead = lastRead.substring(1);
-      return lastRead;
+    if (pattern.hasMatch(read)) {
+      lastRead = read;
     }
 
     return lastRead;

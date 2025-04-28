@@ -10,7 +10,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final smartkitController = Get.find<SmartkitController>();
+  final smartKitController = Get.find<SmartKitController>();
 
   @override
   Widget build(BuildContext context) {
@@ -23,27 +23,27 @@ class _HomeState extends State<Home> {
             const Text("Home"),
             ElevatedButton(
               onPressed: () {
-                smartkitController.findSmartkitDevices();
+                smartKitController.findSmartKitDevices();
               },
               child: const Text("Search Devices"),
             ),
             Obx(
               () => ElevatedButton(
                 onPressed:
-                    smartkitController.connected.value
-                        ? () => smartkitController.writeAndRead("h")
+                    smartKitController.connected.value
+                        ? () => smartKitController.writeAndRead("h")
                         : null,
                 child: const Text("Send message"),
               ),
             ),
             ElevatedButton(
               onPressed: () async {
-                String result = await smartkitController.read();
+                String result = await smartKitController.read();
                 debugPrint("read result: $result");
               },
               child: Text("read values"),
             ),
-            Obx(() => Text("${smartkitController.response}")),
+            Obx(() => Text("${smartKitController.response}")),
           ],
         ),
       ),

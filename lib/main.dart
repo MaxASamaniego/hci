@@ -6,5 +6,5 @@ import 'package:hci/pages/home.dart';
 
 void main() {
   initializeLogger();
-  runApp(GetMaterialApp(home: Home(), initialBinding: Homebinding()));
+  runApp(GetMaterialApp(home: Home(), initialBinding: HomeBinding()));
 }
