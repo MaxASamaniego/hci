@@ -60,6 +60,45 @@ class SmartkitController extends GetxController {
     // String type = decodedMessage.split(":")[0];
     // String value = decodedMessage.split(":")[1];
     ///definir funciones para cada tipo de mensaje
-    response.value = decodedMessage;
+    response.value = _Parser.parse(decodedMessage);
+    _logger.finer(_Parser.parse(response.value));
+  }
+}
+
+class _Parser {
+  static final RegExp pattern = RegExp(r'^g:\d+\|l:\d+\|i:\d+\|w:\d+\|s:\d+\|$');
+  static String buffer = "";
+  static String lastRead = "";
+  static String lastMarker = "";
+
+  static String parse(String message) {
+    if (buffer.isNotEmpty) {
+      if (message.contains("#")) {
+        List<String> t = message.split("#");
+        lastRead = buffer + t[0];
+        buffer = t[1];
+      }
+    } else {
+      if (message.contains("\$")) {
+        List<String> t = message.split("\$");
+        buffer = t[1];
+
+        if (buffer.contains("#")) {
+          lastRead = buffer;
+          buffer = "";
+        }
+      }
+    }
+
+    if (lastRead.contains("\$")) {
+      lastRead.replaceAll("r\\\$", "");
+    }
+
+    if (pattern.hasMatch(lastRead)) {
+      lastRead = lastRead.substring(1);
+      return lastRead;
+    }
+
+    return lastRead;
   }
 }
