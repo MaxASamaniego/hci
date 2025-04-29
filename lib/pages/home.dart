@@ -44,6 +44,15 @@ class _HomeState extends State<Home> {
               child: Text("read values"),
             ),
             Obx(() => Text("${smartKitController.response}")),
+            ElevatedButton(
+              onPressed:
+                  true
+                      ? () {
+                        Get.toNamed('/monitor');
+                      }
+                      : null,
+              child: const Text("monitor values"),
+            ),
           ],
         ),
       ),

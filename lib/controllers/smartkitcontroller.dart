@@ -11,6 +11,7 @@ class SmartKitController extends GetxController {
 
   var connected = false.obs;
   var response = "".obs;
+  Rx<Map<String, String>> data = Rx({});
 
   void findSmartKitDevices() async {
     bluetooth.onDeviceFound((result) {
@@ -57,18 +58,38 @@ class SmartKitController extends GetxController {
 
   void onDeviceNotification(List<int> data) {
     String decodedMessage = String.fromCharCodes(data);
-    // String type = decodedMessage.split(":")[0];
-    // String value = decodedMessage.split(":")[1];
-    ///definir funciones para cada tipo de mensaje
     response.value = _Parser.parse(decodedMessage);
-    _logger.finer(_Parser.parse(response.value));
+    _logger.finer("Parsed: ${response.value}");
+    this.data.value = _Parser.parseToMap(response.value);
+    _logger.finer("Map gotten: ${this.data.value}");
   }
 }
 
 class _Parser {
-  static final RegExp pattern = RegExp(r'^g:\d+\|l:\d+\|i:\d+\|w:\d+\|s:\d+\|$');
+  static final RegExp pattern = RegExp(
+    r'^g:\d+\|l:\d+\|i:\d+\|w:\d+\|s:\d+\|$',
+  );
   static String buffer = "";
   static String lastRead = "";
+
+  static Map<String, String> parseToMap(String message) {
+    final Map<String, String> parsedData = {};
+
+    if (message.isEmpty) {
+      return parsedData;
+    }
+
+    final List<String> parts = message.split("|");
+
+    for (String part in parts) {
+      final List<String> keyValue = part.split(":");
+      if (keyValue.length == 2) {
+        parsedData[keyValue[0]] = keyValue[1];
+      }
+    }
+
+    return parsedData;
+  }
 
   static String parse(String message) {
     String read = "";
@@ -90,7 +111,7 @@ class _Parser {
         }
       }
     }
-    
+
     for (; i < message.length; i++) {
       if (message[i] == "#") {
         read = buffer;
@@ -100,7 +121,7 @@ class _Parser {
         if (i + 2 < message.length) {
           buffer = message.substring(i + 2);
         }
-        
+
         break;
       } else if (message[i] == "\$") {
         buffer = "";
