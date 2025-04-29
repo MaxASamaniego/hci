@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hci/controllers/smartkitcontroller.dart';
+import 'package:hci/pages/widgets/sensor_bar.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -10,49 +12,59 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final textController = TextEditingController();
   final smartKitController = Get.find<SmartKitController>();
+  final notEmpty = false.obs;
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Home")),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("Home"),
-            ElevatedButton(
-              onPressed: () {
-                smartKitController.findSmartKitDevices();
-              },
-              child: const Text("Search Devices"),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [const SensorBar()],
             ),
-            Obx(
-              () => ElevatedButton(
-                onPressed:
-                    smartKitController.connected.value
-                        ? () => smartKitController.writeAndRead("h")
-                        : null,
-                child: const Text("Send message"),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 500,
+                      child: TextField(
+                        controller: textController, 
+                        onChanged: (value) => notEmpty.value = value.isNotEmpty,
+                      ),
+                    ),
+                    Obx(
+                      () => IconButton.filled(
+                        onPressed: notEmpty.value ? 
+                          () {
+                            smartKitController.write(textController.text);
+                            textController.text = "";
+                          } 
+                        :
+                          null, 
+                        icon: Icon(Icons.send), 
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      )
+                    )
+                  ],
+                ),
               ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                String result = await smartKitController.read();
-                debugPrint("read result: $result");
-              },
-              child: Text("read values"),
-            ),
-            Obx(() => Text("${smartKitController.response}")),
-            ElevatedButton(
-              onPressed:
-                  true
-                      ? () {
-                        Get.toNamed('/monitor');
-                      }
-                      : null,
-              child: const Text("monitor values"),
-            ),
+            )
           ],
         ),
       ),

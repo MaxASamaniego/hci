@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
 
-class SensorWidget extends StatefulWidget {
+class SensorWidget extends StatelessWidget {
   const SensorWidget({super.key, required this.icon, required this.text});
 
   final IconData icon;
-  final RxString text;
+  final String text;
 
-  @override
-  State<StatefulWidget> createState() => SensorState();
-}
-
-class SensorState extends State<SensorWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -22,11 +15,12 @@ class SensorState extends State<SensorWidget> {
             shape: BoxShape.circle,
             color: Theme.of(context).colorScheme.primary,
           ),
-          child: Icon(widget.icon),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 32,),
+          ),
         ),
-        Obx(() => 
-          Text(widget.text.value),
-        )
+        Text(text)
       ],
     );
   }

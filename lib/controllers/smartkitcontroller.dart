@@ -10,7 +10,6 @@ class SmartKitController extends GetxController {
   final bluetooth = Bluetooth();
 
   var connected = false.obs;
-  var response = "".obs;
   Rx<Map<String, String>> data = Rx({});
 
   void findSmartKitDevices() async {
@@ -58,14 +57,11 @@ class SmartKitController extends GetxController {
 
   void onDeviceNotification(List<int> data) {
     String decodedMessage = String.fromCharCodes(data);
-    response.value = _Parser.parse(decodedMessage);
-    _logger.finer("Parsed: ${response.value}");
-    this.data.value = _Parser.parseToMap(response.value);
-    _logger.finer("Map gotten: ${this.data.value}");
+    this.data.value = _Parser.parseToMap(_Parser.parse(decodedMessage));
   }
 }
 
-class _Parser {
+sealed class _Parser {
   static final RegExp pattern = RegExp(
     r'^g:\d+\|l:\d+\|i:\d+\|w:\d+\|s:\d+\|$',
   );
