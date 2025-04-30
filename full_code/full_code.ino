@@ -161,6 +161,7 @@ void loop() {
     val = Serial.read();//set val to character read by serial    Serial.println(val);//output val character in new lines
     pwm_control();
     instructions(val);
+    play_tone(val);
   }
 }
 
@@ -176,19 +177,19 @@ void instructions(char val){
       noTone(3);//set digital 3 to stop playing music
       break;//exit loop
     case 'l'://if val is character 'l'，program will circulate
-      servo_9.write(180);//set servo connected to digital 9 to 180°
+      servo_9.write(150);//set servo connected to digital 9 to 180°
       delay(500);
       break;//exit loop
     case 'm'://if val is character 'm'，program will circulate
-      servo_9.write(0);;//set servo connected to digital 9 to 0°
+      servo_9.write(10);//set servo connected to digital 9 to 0°
       delay(500);
       break;//exit loop
     case 'n'://if val is character 'n'，program will circulate
-      servo_10.write(160);//set servo connected to digital 10 to 180°
+      servo_10.write(150);//set servo connected to digital 10 to 180°
       delay(500);
       break;//exit loop
     case 'o'://if val is character 'o'，program will circulate
-      servo_10.write(0);//set servo connected to digital 10 to 0°
+      servo_10.write(10);//set servo connected to digital 10 to 0°
       delay(500);
       break;//exit loop
     case 'p'://if val is character 'p'，program will circulate
@@ -205,6 +206,8 @@ void instructions(char val){
       digitalWrite(7, LOW);
       digitalWrite(6, LOW); //fan stops rotating
       break;//exit loop
+    case '1':
+      tone(3,131);
   }
 }
 
@@ -376,5 +379,41 @@ void routine_control(){
       noTone(3);
     }
   }
+}
+
+void play_tone(char val){
+  int note = 0;
+  switch(val){
+    case '1': //DO
+      note = M1;
+      break;
+    case '2': //DO mas agudo creo
+      note = M2;
+      break;
+    case '3':
+      note = M3;
+      break;
+    case '4':
+      note = M4;
+      break;
+    case '5':
+      note = M5;
+      break;
+    case '6':
+      note = M6;
+      break;
+    case '7':
+      note = M7;
+      break;
+  }
+
+  if (note != 0){
+    tone(3,note);
+    delay(200);
+    noTone(3);
+  }
+
+
+
 }
 
