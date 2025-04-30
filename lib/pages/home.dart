@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hci/controllers/smartkitcontroller.dart';
+import 'package:hci/pages/widgets/control_panel.dart';
 import 'package:hci/pages/widgets/sensor_bar.dart';
 
 class Home extends StatefulWidget {
@@ -37,10 +38,11 @@ class _HomeState extends State<Home> {
             ),
             Center(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const ControlPanel(),
                     SizedBox(
                       width: 500,
                       child: TextField(
@@ -54,6 +56,7 @@ class _HomeState extends State<Home> {
                           () {
                             smartKitController.write(textController.text);
                             textController.text = "";
+                            notEmpty.value = false;
                           } 
                         :
                           null, 

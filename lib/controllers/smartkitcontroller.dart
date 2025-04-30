@@ -6,6 +6,73 @@ import 'package:logging/logging.dart';
 
 final _logger = Logger("Smart Kit Controller");
 
+sealed class SmartKitState {
+  static final whiteLed = false.obs;
+  static final door = false.obs;
+  static final window = false.obs;
+  static final fan = false.obs;
+  static final music = false.obs;
+  static final yellowLed = false.obs;
+
+  static RxBool _map(SmartKitCommand key) {
+    switch (key) {
+      case SmartKitCommand.whiteLedOn:
+      case SmartKitCommand.whiteLedOff:
+        return whiteLed;
+
+      case SmartKitCommand.doorOpen:
+      case SmartKitCommand.doorClose:
+        return door;
+      
+      case SmartKitCommand.windowOpen:
+      case SmartKitCommand.windowClose:
+        return window;
+
+      case SmartKitCommand.fanStart:
+      case SmartKitCommand.fanStop:
+        return fan;
+
+      case SmartKitCommand.stopMusic:
+        return music;
+
+      case SmartKitCommand.yellowLedOn:
+      case SmartKitCommand.yellowLedOff:
+        return yellowLed;
+      }
+  }
+}
+
+enum SmartKitCommand { 
+  whiteLedOn("a", true), 
+  whiteLedOff("b", false), 
+  // relayOn("c"),
+  // relayOff("d"),
+  stopMusic("g", false),
+  doorOpen("l", true),
+  doorClose("m", false),
+  windowOpen("n", true),
+  windowClose("o", false),
+  fanStart("r", true),
+  fanStop("s", false),
+  yellowLedOn("p", true),
+  yellowLedOff("q", false)
+  ;
+
+
+  const SmartKitCommand(this._value, this._newState);
+  
+  get valueAndSetState {
+    SmartKitState._map(this).value = _newState;
+    return _value;
+  }
+  final String _value;
+  final bool _newState;
+
+  static String routine(List<SmartKitCommand> commands) {
+    return commands.map((e) => e.valueAndSetState).join("");
+  }
+}
+
 class SmartKitController extends GetxController {
   final bluetooth = Bluetooth();
 
