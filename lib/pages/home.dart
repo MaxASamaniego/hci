@@ -63,6 +63,11 @@ class _HomeState extends State<Home> {
                         icon: Icon(Icons.send), 
                         color: Theme.of(context).colorScheme.onPrimary,
                       )
+                    ),
+                    IconButton.filled(
+                      onPressed: () => Get.toNamed("/piano"), 
+                      icon: Icon(Icons.music_note),
+                      color: Theme.of(context).colorScheme.onPrimary,
                     )
                   ],
                 ),
