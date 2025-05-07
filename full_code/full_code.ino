@@ -48,18 +48,19 @@ bool next_is_sharp = false;
 #define D5 392
 #define D6 440
 #define D7 494
-#define M1 523
-#define M1S 554
-#define M2 586
-#define M2S 622
-#define M3 658
-#define M4 697
-#define M4S 739
-#define M5 783
-#define M5S 830
-#define M6 879
-#define M6S 932
-#define M7 987
+#define DO 523
+#define DOs 554
+#define RE 586
+#define REs 622
+#define MI 658
+#define FA 697
+#define FAs 739
+#define SOL 783
+#define SOLs 830
+#define LA 879
+#define LAs 932
+#define SI 987
+
 #define H1 1045
 #define H2 1171
 #define H3 1316
@@ -68,32 +69,33 @@ bool next_is_sharp = false;
 #define H6 1755
 #define H7 1971
 
+
 #define WHOLE 1
 #define HALF 0.5
 #define QUARTER 0.25
 #define EIGHTH 0.25
 #define SIXTEENTH 0.625
 
-//set sound play frequency
-int tune[] =
-{
-  M3, M3, M4, M5,
-  M5, M4, M3, M2,
-  M1, M1, M2, M3,
-  M3, M2, M2,
-  M3, M3, M4, M5,
-  M5, M4, M3, M2,
-  M1, M1, M2, M3,
-  M2, M1, M1,
-  M2, M2, M3, M1,
-  M2, M3, M4, M3, M1,
-  M2, M3, M4, M3, M2,
-  M1, M2, D5, D0,
-  M3, M3, M4, M5,
-  M5, M4, M3, M4, M2,
-  M1, M1, M2, M3,
-  M2, M1, M1
-};
+// //set sound play frequency
+// int tune[] =
+// {
+//   M3, M3, M4, M5,
+//   M5, M4, M3, M2,
+//   M1, M1, M2, M3,
+//   M3, M2, M2,
+//   M3, M3, M4, M5,
+//   M5, M4, M3, M2,
+//   M1, M1, M2, M3,
+//   M2, M1, M1,
+//   M2, M2, M3, M1,
+//   M2, M3, M4, M3, M1,
+//   M2, M3, M4, M3, M2,
+//   M1, M2, D5, D0,
+//   M3, M3, M4, M5,
+//   M5, M4, M3, M4, M2,
+//   M1, M1, M2, M3,
+//   M2, M1, M1
+// };
 
 //set music beat
 float durt[] =
@@ -128,7 +130,7 @@ void setup() {
   mylcd.backlight();//initialize LCD
   //LCD shows "password:" at first row and column
   mylcd.setCursor(1 - 1, 1 - 1);
-  mylcd.print("password:");
+  //mylcd.print("password:");
   
   servo_9.attach(9);//make servo connect to digital 9
   servo_10.attach(10);//make servo connect to digital 10
@@ -154,23 +156,29 @@ void setup() {
   pinMode(12, OUTPUT);//set digital 12 to output
   pinMode(5, OUTPUT);//set digital 5 to output
   pinMode(3, OUTPUT);//set digital 3 to output
-  length = sizeof(tune) / sizeof(tune[0]); //set the value of length
+  // length = sizeof(tune) / sizeof(tune[0]); //set the value of length
 }
 
 
 
-
+bool connected = false;
 void loop() {
   auto_sensor();
    if (Serial.available() > 0) //serial reads the characters
   {
-    val = Serial.read();//set val to character read by serial    Serial.println(val);//output val character in new lines
-    pwm_control();
-    instructions(val);
+    if(connected){
+      val = Serial.read();//set val to character read by serial    Serial.println(val);//output val character in new lines
+      pwm_control();
+      instructions(val);
 
-    play_tone(val);
-    play_half_tone(val);
-
+      play_tone(val);
+      play_half_tone(val);
+    }else{
+      String temp = Serial.readString();
+      if(temp == "OK+CONN"){
+        connected = true;
+      }
+    }
     
   }
   
@@ -217,6 +225,9 @@ void instructions(char val){
       digitalWrite(7, LOW);
       digitalWrite(6, LOW); //fan stops rotating
       break;//exit loop
+    case '.':
+      delay(200);
+      break;
   }
 }
 
@@ -296,22 +307,22 @@ void auto_sensor() {
   Serial.flush();  
 }
 
-// Birthday song
-void music1() {
-  birthday();
-}
-//Ode to joy
-void music2() {
-  Ode_to_Joy();
-}
-void Ode_to_Joy()//play Ode to joy song
-{
-  for (int x = 0; x < length; x++)
-  {
-    tone(tonepin, tune[x]);
-    delay(300 * durt[x]);
-  }
-}
+// // Birthday song
+// void music1() {
+//   birthday();
+// }
+// //Ode to joy
+// void music2() {
+//   Ode_to_Joy();
+// }
+// void Ode_to_Joy()//play Ode to joy song
+// {
+//   for (int x = 0; x < length; x++)
+//   {
+//     tone(tonepin, tune[x]);
+//     delay(300 * durt[x]);
+//   }
+// }
 
 //PWM control
 void pwm_control() {
@@ -376,54 +387,76 @@ void lock_house_routine(){
   current_routine = 'rt2';
 }
 
-void routine_control(){
-  if(current_routine == 'rt1'){
-    return;
-  }
-  if(current_routine == 'rt2'){
-    int infrar = digitalRead(2);
-    if(infrar == 1){
-      music2();
-    }else{
-      noTone(3);
-    }
-  }
-}
+// void routine_control(){
+//   if(current_routine == 'rt1'){
+//     return;
+//   }
+//   if(current_routine == 'rt2'){
+//     int infrar = digitalRead(2);
+//     if(infrar == 1){
+//       music2();
+//     }else{
+//       noTone(3);
+//     }
+//   }
+// }
 
 
 
 void play_tone(char val){
   int note = 0;
+  int octave = 523;
 
   switch(val){
 
     case 'C': //DO
-      note = M1;
+      note = DO;
       break;
     case 'D': 
-      note = M2;
+      note = RE;
       break;
     case 'E':
-      note = M3;
+      note = MI;
       break;
     case 'F':
-      note = M4;
+      note = FA;
       break;
     case 'G':
-      note = M5;
+      note = SOL;
       break;
     case 'A':
-      note = M6;
+      note = LA;
       break;
     case 'B':
-      note = M7;
+      note = SI;
+      break;
+    case 'J':
+      note = DO*2;
+      break;
+    case 'K':
+      note = RE*2;
+      break;
+    case 'L':
+      note = MI*2;
+      break;
+    case 'M':
+      note = FA*2;
+      break;
+    case 'N':
+      note = SOL*2;
+      break;
+    case 'H':
+      note = LA*2;
+      break;
+    case 'I':
+      note = 1974;
       break;
   }
 
   if (note != 0){
     tone(3,note);
-    delay(200);
-    noTone(3);
+    //delay(200);
+    //noTone(3);
   }
 }
 
@@ -432,27 +465,41 @@ void play_half_tone(char val){
 
   switch (val){
   case '1':
-    note = M1S;
+    note = DOs;
     break;
   case '2':
-    note = M2S;
+    note = REs;
     break;
   case '3':
-    note = M4S;
+    note = FAs;
     break;
   case '4':
-    note = M5S;
+    note = SOLs;
     break;
   case '5':
-    note = M6S;
+    note = LAs;
     break;
+  case '6':
+    note = DO*2;
+    break;
+  case '7':
+    note = RE*2;
+    break;
+  case '8':
+    note = FA*2;
+    break;
+  case '9':
+    note = SOL*2;
+    break;
+  case '0':
+    note = LA*2;
+    break;
+  
+  
   }
   if (note != 0){
     tone(3,note);
-    delay(200);
-    noTone(3);
   }
-
-
 }
+
 
