@@ -38,6 +38,7 @@ volatile int water;//set variable water
 int length;
 int tonepin = 3; //set the signal end of passive buzzer to digital 3
 String current_routine;
+bool next_is_sharp = false;
 //define name of every sound frequency
 #define D0 -1
 #define D1 262
@@ -48,11 +49,16 @@ String current_routine;
 #define D6 440
 #define D7 494
 #define M1 523
+#define M1S 554
 #define M2 586
+#define M2S 622
 #define M3 658
 #define M4 697
+#define M4S 739
 #define M5 783
+#define M5S 830
 #define M6 879
+#define M6S 932
 #define M7 987
 #define H1 1045
 #define H2 1171
@@ -161,8 +167,13 @@ void loop() {
     val = Serial.read();//set val to character read by serial    Serial.println(val);//output val character in new lines
     pwm_control();
     instructions(val);
+
     play_tone(val);
+    play_half_tone(val);
+
+    
   }
+  
 }
 
 void instructions(char val){
@@ -206,8 +217,6 @@ void instructions(char val){
       digitalWrite(7, LOW);
       digitalWrite(6, LOW); //fan stops rotating
       break;//exit loop
-    case '1':
-      tone(3,131);
   }
 }
 
@@ -381,28 +390,32 @@ void routine_control(){
   }
 }
 
+
+
 void play_tone(char val){
   int note = 0;
+
   switch(val){
-    case '1': //DO
+
+    case 'C': //DO
       note = M1;
       break;
-    case '2': //DO mas agudo creo
+    case 'D': 
       note = M2;
       break;
-    case '3':
+    case 'E':
       note = M3;
       break;
-    case '4':
+    case 'F':
       note = M4;
       break;
-    case '5':
+    case 'G':
       note = M5;
       break;
-    case '6':
+    case 'A':
       note = M6;
       break;
-    case '7':
+    case 'B':
       note = M7;
       break;
   }
@@ -412,7 +425,33 @@ void play_tone(char val){
     delay(200);
     noTone(3);
   }
+}
 
+void play_half_tone(char val){
+  int note = 0;
+
+  switch (val){
+  case '1':
+    note = M1S;
+    break;
+  case '2':
+    note = M2S;
+    break;
+  case '3':
+    note = M4S;
+    break;
+  case '4':
+    note = M5S;
+    break;
+  case '5':
+    note = M6S;
+    break;
+  }
+  if (note != 0){
+    tone(3,note);
+    delay(200);
+    noTone(3);
+  }
 
 
 }
