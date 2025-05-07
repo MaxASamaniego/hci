@@ -3,6 +3,39 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hci/controllers/smartkitcontroller.dart';
 
+final _whiteNotes = ["C", "D", "E", "F", "G", "A", "B", "J", "K", "L", "M", "N", "H", "I"];
+final _accidentals = ["1", "2", "", "3", "4", "5", "", "6", "7", "", "8", "9", "0"];
+
+const _whiteLabels = {
+  "C": "C0",
+  "D": "D0",
+  "E": "E0",
+  "F": "F0",
+  "G": "G0",
+  "A": "A0",
+  "B": "B0",
+  "J": "C1",
+  "K": "D1",
+  "L": "E1",
+  "M": "F1",
+  "N": "G1",
+  "H": "A1",
+  "I": "B1",
+};
+
+const _accidentalsLabels = {
+  "1": "C0#",
+  "2": "D0#",
+  "3": "F0#",
+  "4": "G0#",
+  "5": "A0#",
+  "6": "C1#",
+  "7": "D1#",
+  "8": "F1#",
+  "9": "G1#",
+  "0": "A1#",
+};
+
 class PianoPage extends StatefulWidget {
   const PianoPage({super.key});
 
@@ -12,7 +45,7 @@ class PianoPage extends StatefulWidget {
 
 class _PianoPageState extends State<PianoPage> {
   final smartKitController = Get.find<SmartKitController>();
-  static const int keys = 7;
+  static final int keys = _whiteNotes.length;
   double get keyWidth => 80 + (80 * _widthRatio);
   double _widthRatio = 0.5;
   final bool _showLabels = true;
@@ -20,7 +53,7 @@ class _PianoPageState extends State<PianoPage> {
   @override
   void didChangeDependencies() {
     double screenWidth = MediaQuery.of(context).size.width;
-    _widthRatio = (screenWidth - 80 * keys - 28) / (80 * keys);
+    _widthRatio = (screenWidth - 80 * keys - (28 * _whiteNotes.length/7)) / (80 * keys);
     super.didChangeDependencies();
   }
 
@@ -39,15 +72,7 @@ class _PianoPageState extends State<PianoPage> {
         children: <Widget>[
           Row(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _buildKey("C", false),
-              _buildKey("D", false),
-              _buildKey("E", false),
-              _buildKey("F", false),
-              _buildKey("G", false),
-              _buildKey("A", false),
-              _buildKey("B", false),
-            ],
+            children: <Widget>[for (var note in _whiteNotes) _buildKey(note, false)],
           ),
           Positioned(
             left: 0.0,
@@ -59,12 +84,7 @@ class _PianoPageState extends State<PianoPage> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Container(width: keyWidth * .5),
-                _buildKey("1", true),
-                _buildKey("2", true),
-                Container(width: keyWidth),
-                _buildKey("3", true),
-                _buildKey("4", true),
-                _buildKey("5", true),
+                for (var note in _accidentals) if(note != "") _buildKey(note, true) else Container(width: keyWidth),
                 Container(width: keyWidth * .5),
               ],
             ),
@@ -83,16 +103,8 @@ class _PianoPageState extends State<PianoPage> {
     );
   }
 
-  static const accidentals = {
-    "1": "C#",
-    "2": "D#",
-    "3": "F#",
-    "4": "G#",
-    "5": "A#",
-  };
-
   Widget _buildKey(String id, bool accidental) {
-    final pitchName = accidentals[id] ?? id;
+    final pitchName = accidental ? _accidentalsLabels[id] ?? id : _whiteLabels[id] ?? id;
     final pianoKey = Stack(
       children: <Widget>[
         Semantics(
@@ -104,8 +116,8 @@ class _PianoPageState extends State<PianoPage> {
             child: InkWell(
               borderRadius: borderRadius,
               highlightColor: Colors.grey,
-              onTap: () {},
               onTapDown: (_) => smartKitController.write(id),
+              onTapUp: (_) => smartKitController.write("g"),
             ),
           ),
         ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -54,7 +56,14 @@ class _HomeState extends State<Home> {
                       () => IconButton.filled(
                         onPressed: notEmpty.value ? 
                           () {
-                            smartKitController.write(textController.text);
+                            if (textController.text.startsWith("music=")) {
+                              List<String> instructions = textController.text.split("|");
+                              music(instructions[0].substring(7));
+                              smartKitController.write(instructions[1]);
+                            } else {
+                              smartKitController.write(textController.text);
+                            }
+
                             textController.text = "";
                             notEmpty.value = false;
                           } 
@@ -77,5 +86,30 @@ class _HomeState extends State<Home> {
         ),
       ),
     );
+  }
+
+  void music(String notes) {
+    int i = 0;
+
+    void callback(Timer timer) {
+      smartKitController.write(notes[i]);
+
+      if (notes[i] == ".") {
+        timer.cancel();
+
+        Timer(Duration(milliseconds: 100), () {
+          Timer.periodic(Duration(milliseconds: 200), callback);
+        });
+      }
+
+      i++;
+
+      if (i == notes.length) {
+        smartKitController.write(SmartKitCommand.stopMusic.valueAndSetState);
+        timer.cancel();
+      }
+    }
+
+    Timer.periodic(Duration(milliseconds: 200), callback);
   }
 }
