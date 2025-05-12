@@ -92,6 +92,8 @@ class _HomeState extends State<Home> {
     int i = 0;
 
     void callback(Timer timer) {
+      if(i >= notes.length) return;
+
       smartKitController.write(notes[i]);
 
       if (notes[i] == ".") {
